@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AMApplicationBuild</key>
+	<string>428</string>
+	<key>AMApplicationVersion</key>
+	<string>2.7</string>
+	<key>AMDocumentVersion</key>
+	<string>2</string>
+	<key>actions</key>
+	<array>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.cocoa.string</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>2.0.3</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>COMMAND_STRING</key>
+					<dict/>
+					<key>CheckedForUserDefaultShell</key>
+					<dict/>
+					<key>inputMethod</key>
+					<dict/>
+					<key>shell</key>
+					<dict/>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.cocoa.string</string>
+					</array>
+				</dict>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Run Shell Script.action</string>
+				<key>ActionName</key>
+				<string>运行 Shell 脚本</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>COMMAND_STRING</key>
+					<string># Script by BigXiXi, contact me: xixi@bigxixi.com
+# 序列帧转 webP v1.21
+# ——————————————
+# webp 主程序路径
+i2w="/Applications/webp/img2webp"
+pngquant="/Applications/webp/pngquant"
+# 如果未安装，下载地址：https://raw.githubusercontent.com/bigxixi/ReadMe-Resources/master/webp/webp.zip ，将 webp.zip 解压到「应用程序」文件夹下。
+# 缓存地址
+configLoop=~/Library/Caches/xxwebP_loop
+configFPS=~/Library/Caches/xxwebP_fps
+configQ=~/Library/Caches/xxwebP_q
+# 读取默认或者上一次的设置，如果没有缓存则使用默认参数
+if [ ! -f $configLoop ]; then
+	echo "0" &gt; $configLoop	
+fi 
+LOOP_SET=$(&lt;$configLoop)
+
+if [ ! -f $configFPS ]; then
+	echo "30" &gt; $configFPS
+fi 
+FPS_SET=$(&lt;$configFPS)
+
+if [ ! -f $configQ ]; then
+	echo "80" &gt; $configQ
+fi 
+Q_SET=$(&lt;$configQ)
+
+if [ -f $i2w ]; then
+# 询问是否用默认配置
+	CONFIG="$(osascript -e 'display dialog "webP 动画参数如下，是否使用？\n\n - 循环次数（0代表无限循环）： \t\t\t\t'$LOOP_SET'\n - 帧 率（FPS）：\t\t\t\t\t\t\t\t'$FPS_SET'\n - 压缩质量（最高100）： \t\t\t\t\t\t'$Q_SET'" buttons {"使用该参数", "自己输入"} default button "使用该参数" with title "序列帧转 webP by BigXiXi v1.21"')"
+# 手动输入压制参数，并保存作为下一次的值
+	if [ "$CONFIG" = "button returned:自己输入" ]; then
+    	LOOP_SET="$(osascript -e 'Tell application "System Events" to display dialog "循环次数（默认0，即无限循环）:" default answer "0"' -e 'text returned of result' 2&gt;/dev/null)"
+		# 若取消则退出，若留空则使用默认值        
+		if [ $? -ne 0 ]; then
+        	osascript -e 'Tell application "System Events" to display alert "已取消输入，若想转换 webp 动画请重新运行。" as warning'
+            exit 0
+        elif [ -z "$LOOP_SET" ]; then
+			LOOP_SET="0"
+        fi
+		echo "$LOOP_SET" &gt; $configLoop
+		FPS_SET="$(osascript -e 'Tell application "System Events" to display dialog "帧 率（FPS）:" default answer "30"' -e 'text returned of result' 2&gt;/dev/null)"
+		if [ $? -ne 0 ]; then
+			osascript -e 'Tell application "System Events" to display alert "已取消输入，若想转换 webp 动画请重新运行。" as warning'
+            exit 0
+        elif [ -z "$FPS_SET" ]; then
+			FPS_SET="30"
+        fi
+		echo "$FPS_SET" &gt; $configFPS
+		Q_SET="$(osascript -e 'Tell application "System Events" to display dialog "质量（最高100）:" default answer "80"' -e 'text returned of result' 2&gt;/dev/null)"
+		if [ $? -ne 0 ]; then
+			osascript -e 'Tell application "System Events" to display alert "已取消输入，若想转换 webp 动画请重新运行。" as warning'
+            exit 0
+        elif [ -z "$Q_SET" ]; then
+			Q_SET="80"
+        fi
+		echo "$Q_SET" &gt; $configQ
+	fi
+	# 处理序列帧，生成webp动画。如果文件名或者文件夹有空格则替换为下划线。
+	for f in "$@"
+	do 
+    	imgsP=$f
+    	imgsPP=$(dirname "$imgsP") 
+		imgsT="$imgsP"_temp
+		cp -R "$imgsP" "$imgsT"
+    	imgs=''
+		cd "$imgsT"
+		OLD_IFS=$IFS 
+		IFS=$'\n'
+    	for file in `ls "$imgsT"` 
+		do
+			#有的png会出奇怪的问题，所以先100%画质压缩一遍
+			"$pngquant" "$file" --speed 1 --quality 100 -f --ext .png
+    		ftemp="`echo ${file} | sed 's/ /_/g'`"
+    		if [ "$file" != "ftemp" ]
+    		then
+        		mv "$file" "$ftemp"
+				imgs=$imgs$ftemp" "
+			else
+				imgs=$imgs$file" "
+    		fi
+    	done
+		IFS=$OLD_IFS 
+		DUR_SET=$(echo "scale=0;1000*1/$FPS_SET"|bc)
+    	"$i2w" -loop $LOOP_SET -d $DUR_SET -lossy -q $Q_SET $imgs -o "$imgsPP/$(basename "$imgsP").webp"
+		# 生成成功/失败后提示
+		afplay /System/Library/Sounds/Submarine.aiff
+		if [ -f "$imgsPP/$(basename "$imgsP").webp" ]; then
+			osascript -e 'display notification "搞定！生成的 WebP 文件在序列帧文件夹所在目录~" with title "WebP 转换成功"'
+		else
+			osascript -e 'display notification "部分序列帧转换失败，请检查序列帧文件及文件名是否有问题。" with title "WebP 转换失败"'
+		fi
+		rm -rf "$imgsT"
+	done
+else
+# 找不到 image2webp 后提示
+	osascript -e ' display dialog "未找到webp转换主程序，请联系 xixi@bigxixi.com" buttons {"OK"} default button 1 with icon caution with title "出错了！"'
+fi
+
+</string>
+					<key>CheckedForUserDefaultShell</key>
+					<true/>
+					<key>inputMethod</key>
+					<integer>1</integer>
+					<key>shell</key>
+					<string>/bin/bash</string>
+					<key>source</key>
+					<string></string>
+				</dict>
+				<key>BundleIdentifier</key>
+				<string>com.apple.RunShellScript</string>
+				<key>CFBundleVersion</key>
+				<string>2.0.3</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryUtilities</string>
+				</array>
+				<key>Class Name</key>
+				<string>RunShellScriptAction</string>
+				<key>InputUUID</key>
+				<string>321E5F17-A694-4654-9EAF-BC206EEF5AB4</string>
+				<key>Keywords</key>
+				<array>
+					<string>Shell</string>
+					<string>脚本</string>
+					<string>命令</string>
+					<string>运行</string>
+					<string>Unix</string>
+				</array>
+				<key>OutputUUID</key>
+				<string>63658517-BE12-449D-8BC7-DC6E0FCA10B2</string>
+				<key>UUID</key>
+				<string>F5DFBE38-131F-4432-AF72-60346165E14A</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default value</key>
+						<integer>0</integer>
+						<key>name</key>
+						<string>inputMethod</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+					<key>1</key>
+					<dict>
+						<key>default value</key>
+						<string></string>
+						<key>name</key>
+						<string>source</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>1</string>
+					</dict>
+					<key>2</key>
+					<dict>
+						<key>default value</key>
+						<false/>
+						<key>name</key>
+						<string>CheckedForUserDefaultShell</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>2</string>
+					</dict>
+					<key>3</key>
+					<dict>
+						<key>default value</key>
+						<string></string>
+						<key>name</key>
+						<string>COMMAND_STRING</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>3</string>
+					</dict>
+					<key>4</key>
+					<dict>
+						<key>default value</key>
+						<string>/bin/sh</string>
+						<key>name</key>
+						<string>shell</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>4</string>
+					</dict>
+				</dict>
+				<key>isViewVisible</key>
+				<true/>
+				<key>location</key>
+				<string>649.000000:646.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Run Shell Script.action/Contents/Resources/zh_CN.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<true/>
+		</dict>
+	</array>
+	<key>connectors</key>
+	<dict/>
+	<key>workflowMetaData</key>
+	<dict>
+		<key>serviceApplicationBundleID</key>
+		<string>com.apple.finder</string>
+		<key>serviceApplicationPath</key>
+		<string>/System/Library/CoreServices/Finder.app</string>
+		<key>serviceInputTypeIdentifier</key>
+		<string>com.apple.Automator.fileSystemObject.folder</string>
+		<key>serviceOutputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>serviceProcessesInput</key>
+		<integer>0</integer>
+		<key>workflowTypeIdentifier</key>
+		<string>com.apple.Automator.servicesMenu</string>
+	</dict>
+</dict>
+</plist>
