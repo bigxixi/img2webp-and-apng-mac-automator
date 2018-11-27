@@ -6,6 +6,11 @@
 3. 对着存放序列帧的文件夹 `右键` --> `服务` --> `序列帧转 webp + apng` ，根据提示操作即可。也可以单独导出 webp 或者 apng 格式。  
 4. 可以选择多个序列帧文件夹进行操作，导出的 webp 或者 apng 动画存放在序列帧文件夹所在的目录。  
 
+### 如果你安装了之前的版本
+可能会有重复的右键菜单项，此时需要清理一下旧版，清理方法
+finder - 前往 - 前往文件夹，输入 「/用户/你的用户名/资源库/Services/」，找到 「序列帧转 webp」这个服务然后删掉就好。  
+
+### 界面
 <img src="https://raw.githubusercontent.com/bigxixi/ReadMe-Resources/master/webp/BGG.png" width="70%" />
 <img src="https://raw.githubusercontent.com/bigxixi/ReadMe-Resources/master/webp/dialog.png" width="70%" />
 <img src="https://raw.githubusercontent.com/bigxixi/ReadMe-Resources/master/webp/loop.png" width="70%" />
