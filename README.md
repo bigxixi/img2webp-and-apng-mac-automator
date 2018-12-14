@@ -30,11 +30,11 @@ finder - 前往 - 前往文件夹，输入 「/用户/你的用户名/资源库/
 
 ————————  
 ## 本服务使用了以下软件：
-img2webp
+img2webp  
 https://developers.google.com/speed/webp/docs/precompiled
 
-apngasm
+apngasm  
 http://apngasm.sourceforge.net/
 
-pngquant
+pngquant  
 https://pngquant.org/
